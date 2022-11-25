@@ -27,11 +27,20 @@ void setup() {
   Serial.begin(115200);
   pinMode(PIN_TEST,OUTPUT);
 
-  wifi_init();
+
+
+
+
+  timer_init();
+  Serial.println("Delay 5sec.");
+  delay(5000);
+
+  // wifi_init();
   
-  Serial.println("Delay 1sec.");
-  delay(1000);
-  master_sync();
+
+  // Serial.println("Delay 5sec.");
+  // delay(5000);
+  // master_sync();
 
 }
  
@@ -40,45 +49,31 @@ void loop() {
 }
 
 
-// void IRAM_ATTR onTimer(){       //   ОБРАБОТЧИК ТАЙМЕРА 
+void IRAM_ATTR onTimer(){       //   ОБРАБОТЧИК ТАЙМЕРА 
 
-//   pin_state = !pin_state;
+  pin_state = !pin_state;
 
-//   digitalWrite(PIN_TEST, pin_state);   // Блинкуем пин
-// }
+  digitalWrite(PIN_TEST, pin_state);   // Блинкуем пин
+}
 
-// void timer_init(){
-//   Serial.println("- TIMER init -");
-//   My_timer = timerBegin(3, 8, true);
-//   timerAttachInterrupt(My_timer, &onTimer, true);
-//   timerAlarmWrite(My_timer, 100, true);          //Раз в миллисек
-//   timerAlarmEnable(My_timer);
+void timer_init(){
+  Serial.println("- TIMER init -");
+  My_timer = timerBegin(3, 8, true);
+  timerAttachInterrupt(My_timer, &onTimer, true);
+  timerAlarmWrite(My_timer, 100, true);          //Раз в миллисек
+  timerAlarmEnable(My_timer);
 
-// }
+}
 
 void master_sync(){
   Serial.println("Master Sync start");
   esp_now_unregister_recv_cb(); // Отключаем callback-функцию передачи
   esp_now_register_recv_cb(OnMasterRecvPTP);
   
-  uint8_t sync_counter=0;
-  while(1){
-    send_sync();
-    delay(10);
-
-    sync_counter++;
-    if(sync_counter==50)break;
-    
-  }
-  
-  Serial.println("end!");
-
-}
-
-void send_sync(){
   t1_sync = micros(); // Засекаем время
   uint8_t dataToSend[5] = {'$',0,0,0,0};       
   memcpy(&dataToSend[1], &t1_sync, 4);  // Копируем в dataToSend 4 байта с t1
+
   esp_now_send(broadcastAddr, dataToSend, 5); // Отправляем 5 байт Sync-пакета 
 }
 
