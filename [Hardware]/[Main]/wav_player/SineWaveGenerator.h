@@ -11,7 +11,7 @@
 #pragma once
 
 #include <stdint.h>
-
+#include "hl2_8k_int16.h"
 class SineWaveGenerator {
 
     public:
@@ -52,11 +52,11 @@ class SineWaveGenerator {
             }
             return result;
         }
-
+      float m_time = 0.0;
     protected:
         int sample_rate;
         float m_frequency = 0;
-        float m_time = 0.0;
+        
         float m_amplitude = 1.0;  
         float m_deltaTime = 0.0;
         float m_phase = 0.0;

@@ -1,51 +1,81 @@
-
 #include "AudioKitHAL.h"
+#include "SineWaveGenerator.h"
+//#include "hl2_8k_int16.h"
 
-#define WAV_SAMPLES 43245
-#define WAV_4SAMPLES WAV_SAMPLES*4
+#define SAMPLES WAV_SAMPLES
+#define CBUFF   256*4
+uint8_t buff[CBUFF];
+uint8_t zerobuff[CBUFF]={0};
+
+int smp_cnt=0;
+
 
 AudioKit kit;
-uint8_t buffer[WAV_4SAMPLES];
+SineWaveGenerator wave;
 
 void setup() {
-  LOGLEVEL_AUDIOKIT = AudioKitInfo; 
+  LOGLEVEL_AUDIOKIT = AudioKitDebug; 
   Serial.begin(115200);
+
+
+
+
   // open in write mode
-
   auto cfg = kit.defaultConfig(AudioOutput);
-  cfg.sample_rate = AUDIO_HAL_16K_SAMPLES;
-  cfg.dac_output = AUDIO_HAL_DAC_OUTPUT_LINE2; // Левый?
-  cfg.codec_mode =AUDIO_HAL_CODEC_MODE_DECODE;
-  cfg.bits_per_sample = AUDIO_HAL_BIT_LENGTH_16BITS;
-
-  // Serial.print("SampleRate:"); Serial.println(cfg.sampleRate());
-  // Serial.print("dac_output:"); Serial.println(cfg.dac_output);
-  // Serial.print("buffer size:"); Serial.println(cfg.buffer_size);
-  // Serial.print("i2sconf bits per sample:"); Serial.println(cfg.i2sConfig().bits_per_sample);
-  ///Serial.print("i2sconf bits per chan:"); Serial.println(cfg.i2sConfig().bits_per_chan);
-
+  cfg.sample_rate = AUDIO_HAL_08K_SAMPLES;
   kit.begin(cfg);
 
 
+  wave.setFrequency(1000);
+  wave.setSampleRate(cfg.sampleRate());
+  
+  // 1000 hz
+
 }
 
+size_t l=0;
+
+long t1,t2;
+esp_err_t err_state;
 void loop() {
-  size_t l = read_to_i2s(buffer,WAV_4SAMPLES);
-  kit.write(buffer,l);
-  delay(5000);
+  err_state = es8388_set_voice_mute(0);
+  delay(100);
+  //t1 = millis();
+  Serial.println("a");
+  wave.m_time = 0;
+  for(int i=0;i<10;i++){
+  l = wave.read(buff,CBUFF);
+  kit.write(buff, l);
+  }
+  err_state = es8388_set_voice_mute(1);
+  Serial.print("s:");Serial.println(err_state);
+
+  //t2=millis();
+  //Serial.print("m1:");Serial.println(t2-t1);
+  //for(int i=0;i<10;i++)kit.write(zerobuff,l);
+  //t1=millis();
+  //Serial.print("m2:");Serial.println(t1-t2);
+
+
+  delay(1000);
 }
 
-
-
-size_t read_to_i2s(uint8_t *buffer, size_t bytes){
+uint32_t reading(uint8_t *buffer,int len){
             size_t result = 0;
-            int16_t *ptr = (int16_t*)buffer;
-            for (int j=0;j<bytes/4;j++){
-                int16_t sample = signal_samples[j];
+            int16_t *ptr = (int16_t*)(buffer);
+
+            for (int j=0;j<len;j++){
+                int16_t sample = signal_samples[j+smp_cnt];
                 *ptr++ = sample;
                 *ptr++ = sample;
                 result+=4;
             }
+
+            smp_cnt+=len;
+            if(smp_cnt>=SAMPLES)smp_cnt=0;
+
             return result;
 }
+
+
 
